@@ -1,0 +1,41 @@
+{
+  "name": "@mesapay/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tenant": "./src/tenant.ts",
+    "./demo": "./src/demo.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "postinstall": "node scripts/generate.mjs",
+    "migrate": "node scripts/migrate.mjs deploy",
+    "migrate:new": "node scripts/migrate.mjs new",
+    "migrate:status": "node scripts/migrate.mjs status",
+    "seed": "tsx src/seed.ts",
+    "reset": "node scripts/migrate.mjs reset && tsx src/seed.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "create-admin": "tsx src/create-admin.ts"
+  },
+  "dependencies": {
+    "@mesapay/core": "workspace:*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@prisma/driver-adapter-utils": "7.10.0",
+    "@prisma/schema-engine-wasm": "7.10.0-4.0edf323efd1d98336f3f0a68684b56f689b900d3",
+    "@types/pg": "8.15.6",
+    "dotenv": "17.2.3",
+    "prisma": "7.10.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "@mesapay/config": "workspace:*",
+    "@mesapay/auth": "workspace:*"
+  }
+}

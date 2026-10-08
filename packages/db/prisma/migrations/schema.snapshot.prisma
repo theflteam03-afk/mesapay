@@ -1,0 +1,507 @@
+// MesaPay — schema.prisma (Fase 1)
+// Regras: todo modelo de negócio tem restaurantId (RLS no Postgres);
+// dinheiro sempre em centavos inteiros (Int), nunca Float.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+// A URL de conexão fica em prisma.config.ts (Prisma 7).
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────── Enums ─────────────
+
+enum Theme {
+  LIGHT
+  DARK
+}
+enum Plan {
+  START
+  PRO
+  BUSINESS
+}
+enum RestaurantStatus {
+  ONBOARDING
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+enum SessionStatus {
+  OPEN
+  PAYING
+  CLOSED
+}
+enum Station {
+  KITCHEN
+  BAR
+}
+enum Channel {
+  QR
+  STAFF
+}
+enum OrderStatus {
+  PENDING_APPROVAL
+  SENT
+  PRINTED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+enum PaymentMethod {
+  PIX
+  CREDIT
+  DEBIT
+  APPLE_PAY
+  GOOGLE_PAY
+  CASH
+  CARD_TERMINAL
+}
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+enum StaffRole {
+  WAITER
+  CASHIER
+  BARTENDER
+  KITCHEN
+  ADMIN
+  OWNER
+}
+enum PrinterType {
+  BROWSER
+  LOCAL_AGENT
+  CLOUDPRNT
+  EPSON_SDP
+}
+enum PrintJobStatus {
+  PENDING
+  SENT
+  PRINTED
+  FAILED
+}
+enum SaasRole {
+  SUPER_ADMIN
+  SUPPORT
+  SALES
+}
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+enum ActorType {
+  SAAS_USER
+  OWNER
+  STAFF
+  GUEST
+  SYSTEM
+}
+
+// ───────────── Tenancy ─────────────
+
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  restaurants Restaurant[]
+  createdAt   DateTime     @default(now())
+}
+
+model Restaurant {
+  id               String           @id @default(cuid())
+  organizationId   String
+  organization     Organization     @relation(fields: [organizationId], references: [id])
+  slug             String           @unique
+  name             String
+  logoUrl          String?
+  theme            Theme            @default(LIGHT)
+  primaryColor     String           @default("#E11D48")
+  address          String
+  city             String
+  state            String?
+  lat              Float?
+  lng              Float?
+  phone            String?
+  email            String?
+  whatsapp         String?
+  instagram        String?
+  openingHours     Json?
+  googlePlaceId    String?
+  serviceFeePct    Int              @default(10)
+  serviceFeeOptional Boolean        @default(true)
+  requireQrApproval Boolean         @default(false)
+  locales          String[]         @default(["pt-BR"])
+  currency         String           @default("BRL")
+  plan             Plan             @default(START)
+  status           RestaurantStatus @default(ONBOARDING)
+  paymentAccountId String?
+  nextOrderNumber  Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  owners        OwnerUser[]
+  tables        Table[]
+  sessions      TableSession[]
+  categories    Category[]
+  menuItems     MenuItem[]
+  orders        Order[]
+  payments      Payment[]
+  staff         Staff[]
+  printers      Printer[]
+  printJobs     PrintJob[]
+  subscriptions Subscription[]
+  dailyStats    DailyStat[]
+  guests        Guest[]
+  orderItems    OrderItem[]
+  optionGroups  MenuOptionGroup[]
+  options       MenuOption[]
+  allocations   PaymentAllocation[]
+  auditLogs     AuditLog[]
+
+  @@index([organizationId])
+}
+
+// Conta de login do dono (e-mail/senha) — o dispositivo do restaurante loga com ela
+model OwnerUser {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  email        String     @unique
+  name         String
+  passwordHash String?    // null até aceitar o convite
+  inviteToken  String?    @unique
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId])
+}
+
+// ───────────── Salão ─────────────
+
+model Table {
+  id           String         @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id])
+  number       Int
+  label        String?
+  qrToken      String         @unique
+  mapX         Int?
+  mapY         Int?
+  seats        Int            @default(4)
+  active       Boolean        @default(true)
+  sessions     TableSession[]
+  orders       Order[]
+
+  @@unique([restaurantId, number])
+}
+
+model TableSession {
+  id           String        @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  tableId      String
+  table        Table         @relation(fields: [tableId], references: [id])
+  status       SessionStatus @default(OPEN)
+  openedAt     DateTime      @default(now())
+  closedAt     DateTime?
+  subtotal     Int           @default(0)
+  serviceFee   Int           @default(0)
+  total        Int           @default(0)
+  paidAmount   Int           @default(0)
+  guests       Guest[]
+  orders       Order[]
+  payments     Payment[]
+
+  @@index([restaurantId, status])
+  @@index([tableId, status])
+}
+
+model Guest {
+  id           String       @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  deviceId  String
+  name      String
+  sessionId String
+  session   TableSession @relation(fields: [sessionId], references: [id])
+  joinedAt  DateTime     @default(now())
+
+  @@unique([deviceId, sessionId])
+}
+
+// ───────────── Menu ─────────────
+
+model Category {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  nameI18n     Json?      // { "en": "...", "es": "..." }
+  position     Int
+  active       Boolean    @default(true)
+  paused       Boolean    @default(false)
+  items        MenuItem[]
+
+  @@index([restaurantId, position])
+}
+
+model MenuItem {
+  id            String       @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant   @relation(fields: [restaurantId], references: [id])
+  categoryId    String
+  category      Category     @relation(fields: [categoryId], references: [id])
+  name          String
+  nameI18n      Json?
+  description   String?
+  descriptionI18n Json?
+  priceCents    Int
+  photoUrl      String?
+  station       Station      @default(KITCHEN)
+  soldOut       Boolean      @default(false)
+  active        Boolean      @default(true)
+  position      Int
+  optionGroups  MenuOptionGroup[]
+  orderItems    OrderItem[]
+
+  @@index([restaurantId, categoryId, position])
+}
+
+// Ex: "Ponto da carne" (obrigatório, 1 escolha) / "Extras" (0–3)
+model MenuOptionGroup {
+  id           String       @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  menuItemId String
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name       String
+  minSelect  Int          @default(0)
+  maxSelect  Int          @default(1)
+  position   Int
+  options    MenuOption[]
+}
+
+model MenuOption {
+  id           String          @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  groupId     String
+  group       MenuOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name        String
+  priceCents  Int             @default(0)
+  position    Int
+}
+
+// ───────────── Pedidos ─────────────
+
+model Order {
+  id           String       @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  sessionId    String
+  session      TableSession @relation(fields: [sessionId], references: [id])
+  tableId      String
+  table        Table        @relation(fields: [tableId], references: [id])
+  number       Int          // nº sequencial por restaurante (#0187)
+  guestId      String?
+  staffId      String?
+  staff        Staff?       @relation(fields: [staffId], references: [id])
+  channel      Channel
+  status       OrderStatus  @default(SENT)
+  note         String?
+  createdAt    DateTime     @default(now())
+  items        OrderItem[]
+  printJobs    PrintJob[]
+
+  @@unique([restaurantId, number])
+  @@index([restaurantId, createdAt])
+  @@index([sessionId])
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  restaurantId   String
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id])
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id])
+  menuItemId     String
+  menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
+  nameSnapshot   String
+  unitPriceCents Int      // preço + opções no momento do pedido
+  quantity       Int
+  station        Station
+  optionsJson    Json?
+  note           String?
+  ownerGuestId   String?
+  paidCents      Int      @default(0)
+  reservedCents  Int      @default(0) // reservado por pagamentos PENDING
+  cancelled      Boolean  @default(false)
+  allocations    PaymentAllocation[]
+}
+
+// ───────────── Pagamentos ─────────────
+
+model Payment {
+  id           String              @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant          @relation(fields: [restaurantId], references: [id])
+  sessionId    String
+  session      TableSession        @relation(fields: [sessionId], references: [id])
+  payerGuestId String?
+  staffId      String?
+  staff        Staff?              @relation(fields: [staffId], references: [id])
+  method       PaymentMethod
+  amountCents  Int                 // inclui taxa de serviço, exclui gorjeta
+  serviceFeeCents Int              @default(0)
+  tipCents     Int                 @default(0)
+  status       PaymentStatus       @default(PENDING)
+  providerRef  String?             @unique
+  expiresAt    DateTime?
+  allocations  PaymentAllocation[]
+  createdAt    DateTime            @default(now())
+
+  @@index([restaurantId, createdAt])
+  @@index([sessionId, status])
+}
+
+model PaymentAllocation {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  paymentId   String
+  payment     Payment    @relation(fields: [paymentId], references: [id])
+  orderItemId String?
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id])
+  amountCents Int
+}
+
+// ───────────── Equipe ─────────────
+
+model Staff {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  role         StaffRole
+  pinHash      String     // bcrypt(PIN)
+  pinLookup    String     // HMAC-SHA256(PIN, PIN_PEPPER)
+  permissions  String[]
+  active       Boolean    @default(true)
+  lastSeenAt   DateTime?
+  createdAt    DateTime   @default(now())
+  orders       Order[]
+  payments     Payment[]
+
+  @@unique([restaurantId, pinLookup])
+}
+
+// ───────────── Impressão ─────────────
+
+model Printer {
+  id           String      @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  name         String
+  station      Station
+  type         PrinterType
+  address      String?     // IP/USB para agente local
+  printerKey   String      @unique // segredo usado no polling CloudPRNT
+  lastSeenAt   DateTime?
+  active       Boolean     @default(true)
+  jobs         PrintJob[]
+}
+
+model PrintJob {
+  id           String         @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id])
+  orderId      String
+  order        Order          @relation(fields: [orderId], references: [id])
+  printerId    String
+  printer      Printer        @relation(fields: [printerId], references: [id])
+  status       PrintJobStatus @default(PENDING)
+  attempts     Int            @default(0)
+  payload      String         // texto do ticket já formatado
+  createdAt    DateTime       @default(now())
+  printedAt    DateTime?
+
+  @@index([printerId, status])
+}
+
+// ───────────── Relatórios ─────────────
+
+// Alimentada por job a cada 5 min; uma linha por dia × dimensão
+model DailyStat {
+  id            String     @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  day           DateTime   @db.Date
+  dimension     String     // "total" | "table" | "staff" | "channel" | "item"
+  key           String     // id da mesa/garçom/prato, ou "QR"/"STAFF", ou "-"
+  revenueCents  Int        @default(0)
+  orders        Int        @default(0)
+  quantity      Int        @default(0)
+  tipsCents     Int        @default(0)
+
+  @@unique([restaurantId, day, dimension, key])
+}
+
+// ───────────── SaaS ─────────────
+
+model SaasUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  totpSecret   String?
+  role         SaasRole @default(SUPPORT)
+  active       Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  restaurantId     String
+  restaurant       Restaurant         @relation(fields: [restaurantId], references: [id])
+  plan             Plan
+  annual           Boolean            @default(false)
+  status           SubscriptionStatus @default(TRIALING)
+  providerRef      String?
+  currentPeriodEnd DateTime
+  createdAt        DateTime           @default(now())
+}
+
+model Testimonial {
+  id             String  @id @default(cuid())
+  author         String
+  restaurantName String
+  city           String?
+  photoUrl       String?
+  text           String
+  rating         Int
+  published      Boolean @default(false)
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  actorType    ActorType
+  actorId      String
+  action       String
+  dataJson     Json?
+  ip           String?
+  createdAt    DateTime  @default(now())
+
+  @@index([restaurantId, createdAt])
+}

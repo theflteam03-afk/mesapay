@@ -1,0 +1,42 @@
+{
+  "name": "mesapay",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter @mesapay/e2e e2e",
+    "db:migrate": "pnpm --filter @mesapay/db migrate",
+    "db:migrate:new": "pnpm --filter @mesapay/db migrate:new",
+    "db:seed": "pnpm --filter @mesapay/db seed",
+    "db:reset": "pnpm --filter @mesapay/db reset",
+    "db:generate": "pnpm --filter @mesapay/db generate",
+    "setup": "pnpm db:generate && pnpm db:migrate && pnpm db:seed",
+    "db:create-admin": "pnpm --filter @mesapay/db create-admin"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "dotenv-cli": "10.0.0",
+    "turbo": "2.11.7",
+    "typescript": "5.9.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "15.5.6",
+    "@eslint/eslintrc": "3.3.7",
+    "typescript-eslint": "8.46.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp",
+      "@tailwindcss/oxide"
+    ]
+  }
+}

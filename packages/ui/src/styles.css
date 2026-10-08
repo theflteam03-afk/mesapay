@@ -1,0 +1,92 @@
+/*
+ * Tokens de design partilhados pelos 3 apps Next.
+ * Cada app faz:  @import "tailwindcss";  @import "@mesapay/ui/styles.css";
+ * Tema: <html data-theme="light|dark">. Cor do restaurante: --brand (definida inline por restaurante).
+ */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@source "./";
+
+:root {
+  --brand: #e11d48;
+  --brand-fg: #ffffff;
+
+  --bg: #f7f5f2;
+  --surface: #ffffff;
+  --surface-2: #f1eee9;
+  --text: #1c1917;
+  --muted: #6f6964;
+  --border: #e4dfd9;
+  --ring: color-mix(in oklab, var(--brand) 55%, transparent);
+
+  --success: #15803d;
+  --warning: #c2410c;
+  --info: #1d4ed8;
+  --danger: #b91c1c;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0f0e0d;
+  --surface: #191716;
+  --surface-2: #23201e;
+  --text: #f5f3f1;
+  --muted: #a8a19b;
+  --border: #322e2b;
+
+  --success: #4ade80;
+  --warning: #fb923c;
+  --info: #93c5fd;
+  --danger: #f87171;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--brand) 25%, transparent);
+  }
+}
