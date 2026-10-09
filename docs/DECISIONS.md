@@ -40,3 +40,35 @@ Tailwind CSS 4 com tokens em CSS variables (`packages/ui/src/styles.css`); compo
 
 ### D10. Seed com dois restaurantes
 O plano pede 1 restaurante demo; há um segundo pequeno (Café Aurora, modo escuro) para demonstrar o tema e testar o isolamento entre clientes.
+
+## Fase 2
+
+### D11. Tempo real com Postgres `NOTIFY` + SSE (em vez de Supabase Realtime)
+O plano admite "Supabase Realtime (ou Pusher/Ably)". Escolhemos a opção mais simples que não precisa de mais nenhum serviço:
+- **Publicar:** `pg_notify` dentro da MESMA transação que grava o pedido (`packages/realtime/src/events.ts`). O Postgres só entrega a notificação depois do COMMIT, por isso ninguém recebe um aviso de algo que não foi gravado (há um teste que confirma que um ROLLBACK não gera aviso).
+- **Distribuir:** cada processo do app web tem UMA ligação `LISTEN` (`packages/realtime/src/server.ts`) que reparte os avisos pelos celulares ligados por SSE (`/api/t/{qrToken}/events`). O painel (Fase 3/4) publica no mesmo canal e os celulares recebem, mesmo sendo outro app.
+- **Avisos, não dados:** cada evento só tem ids; o celular volta a pedir o estado completo (`GET /api/sessions/{id}`). Também ressincroniza ao religar, ao voltar a mostrar a página e a cada 30 s. Um aviso perdido nunca deixa a conta errada.
+- **Segurança:** os celulares só escutam; o servidor filtra por restaurante e só manda eventos da comanda a quem é convidado dela (cookie do dispositivo).
+- Trocar para Supabase Realtime/Ably mais tarde é local: `publish()` e `useLiveEvents()` são a única interface usada pelos apps.
+- Produção: `DIRECT_URL` tem de ser uma ligação de sessão (o Transaction pooler não suporta LISTEN). Ver DEPLOY.md.
+
+### D12. Identidade do celular
+UUID em `localStorage["mp_device"]` + cookie httpOnly `mp_device` de 1 ano, gravado pelo servidor no `join`. As rotas autenticam pelo cookie; o localStorage repõe o cookie se ele for apagado (e vice-versa). O nome fica em `localStorage["mp_name"]` e, como o domínio é o mesmo para todos os restaurantes, vale em qualquer restaurante MesaPay.
+
+### D13. Uma comanda aberta por mesa (índice único parcial)
+`CREATE UNIQUE INDEX ... ON "TableSession"("tableId") WHERE status <> 'CLOSED'` (migração escrita à mão). Vários celulares a escanear ao mesmo tempo: o segundo INSERT falha e o código relê a comanda criada pelo primeiro. Testado com 6 entradas simultâneas.
+
+### D14. Pedido idempotente (`Order.clientRef`)
+O celular gera um id por envio do carrinho. Rede fraca ou toque duplo reenviam o mesmo id e recebem o mesmo pedido (índice único `restaurantId + clientRef`), sem duplicar na cozinha. Um reenvio não conta no limite de 1 pedido a cada 10 s.
+
+### D15. Preço sempre no servidor
+`priceCart()` (`packages/core/src/cart.ts`) valida item ativo/não esgotado/categoria não pausada, mínimo/máximo de cada grupo de opções, opções do próprio item, até 30 itens, observação até 140 caracteres, e calcula o preço com as opções. O `OrderItem` guarda nome, preço e opções no momento do pedido. Os totais da comanda são recalculados a partir dos itens a cada pedido.
+
+### D16. Anti-spam com Upstash (fail-open)
+`createRateLimiter()` usa Upstash Redis via REST quando `UPSTASH_REDIS_REST_URL/TOKEN` existem, senão memória (dev). Se o Upstash estiver fora do ar, deixa passar (não bloqueia clientes legítimos) e regista o erro. Logins do painel e do admin passaram a usar o mesmo limitador.
+
+### D17. "Esgotado" no painel já na Fase 2
+O plano põe o Menu completo na Fase 4, mas a Fase 2 exige esgotados ao vivo no celular. O painel ganhou só o interruptor "Esgotado" (ação do dono, sem PIN); na Fase 4 passa a exigir PIN com permissão "menu". As mesas do painel mostram Livre / Ocupada / A pagar com o total da comanda.
+
+### D18. Interface do app da mesa
+Sem bibliotecas de UI no navegador (ícones em SVG próprio, `<dialog>` nativo para as folhas): 119 kB de JS inicial (meta < 200 kB). A conta da mesa é desenhada como um recibo térmico; o resto usa a cor e o tema do restaurante. Pagar pelo celular chega na Fase 5; até lá a conta diz "Para pagar, chame um funcionário".

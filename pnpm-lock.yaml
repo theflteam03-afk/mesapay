@@ -123,6 +123,9 @@ importers:
       '@mesapay/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@mesapay/realtime':
+        specifier: workspace:*
+        version: link:../../packages/realtime
       '@mesapay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -197,6 +200,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@mesapay/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@mesapay/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -209,6 +215,9 @@ importers:
       '@mesapay/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@mesapay/realtime':
+        specifier: workspace:*
+        version: link:../../packages/realtime
       '@mesapay/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -328,6 +337,9 @@ importers:
       '@mesapay/core':
         specifier: workspace:*
         version: link:../core
+      '@mesapay/realtime':
+        specifier: workspace:*
+        version: link:../realtime
       '@prisma/adapter-pg':
         specifier: 7.10.0
         version: 7.10.0
@@ -374,6 +386,37 @@ importers:
       '@mesapay/config':
         specifier: workspace:*
         version: link:../config
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/node@22.19.1)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.20.6)
+
+  packages/realtime:
+    dependencies:
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
+    devDependencies:
+      '@mesapay/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: 22.19.1
+        version: 22.19.1
+      '@types/pg':
+        specifier: 8.15.6
+        version: 8.15.6
+      '@types/react':
+        specifier: 19.2.2
+        version: 19.2.2
+      dotenv:
+        specifier: 17.2.3
+        version: 17.2.3
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -5513,14 +5556,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.14.0(@typescript-eslint/parser@8.71.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0)):
+  eslint-module-utils@2.14.0(@typescript-eslint/parser@8.46.2(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint@9.39.5(jiti@2.7.0)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
-      '@typescript-eslint/parser': 8.71.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+      '@typescript-eslint/parser': 8.46.2(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       eslint: 9.39.5(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.5(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
@@ -5535,7 +5577,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.5(jiti@2.7.0)
       eslint-import-resolver-node: 0.3.10
-      eslint-module-utils: 2.14.0(@typescript-eslint/parser@8.71.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
+      eslint-module-utils: 2.14.0(@typescript-eslint/parser@8.46.2(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-node@0.3.10)(eslint@9.39.5(jiti@2.7.0))
       hasown: 2.0.4
       is-core-module: 2.17.0
       is-glob: 4.0.3

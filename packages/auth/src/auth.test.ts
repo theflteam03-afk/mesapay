@@ -3,6 +3,7 @@ import {
   base32Decode,
   base32Encode,
   createMemoryRateLimiter,
+  createUpstashRateLimiter,
   generateTotpSecret,
   hashPassword,
   hashPin,
@@ -84,14 +85,52 @@ describe("sessão", () => {
 });
 
 describe("rate limit", () => {
-  it("bloqueia depois do máximo", () => {
+  it("bloqueia depois do máximo (memória)", async () => {
     const rl = createMemoryRateLimiter({ max: 2, windowMs: 1000 });
-    expect(rl.hit("k").ok).toBe(true);
-    expect(rl.hit("k").ok).toBe(true);
-    const blocked = rl.hit("k");
+    expect((await rl.hit("k")).ok).toBe(true);
+    expect((await rl.hit("k")).ok).toBe(true);
+    const blocked = await rl.hit("k");
     expect(blocked.ok).toBe(false);
     expect(blocked.retryAfterMs).toBeGreaterThan(0);
-    rl.reset("k");
-    expect(rl.hit("k").ok).toBe(true);
+    await rl.reset("k");
+    expect((await rl.hit("k")).ok).toBe(true);
+  });
+
+  it("Upstash: envia o pipeline certo e bloqueia acima do máximo", async () => {
+    const calls: { url: string; body: string; auth: string | undefined }[] = [];
+    let count = 0;
+    const fakeFetch = async (url: string, init: { method: string; headers: Record<string, string>; body: string }) => {
+      calls.push({ url, body: init.body, auth: init.headers.Authorization });
+      count++;
+      return { ok: true, status: 200, json: async () => [{ result: "OK" }, { result: count }, { result: 4200 }] };
+    };
+    const rl = createUpstashRateLimiter({ max: 2, windowMs: 10_000, prefix: "order", url: "https://x.upstash.io/", token: "tok", fetch: fakeFetch });
+    expect((await rl.hit("dev1")).ok).toBe(true);
+    expect((await rl.hit("dev1")).ok).toBe(true);
+    expect(await rl.hit("dev1")).toEqual({ ok: false, retryAfterMs: 4200 });
+    expect(calls[0]?.url).toBe("https://x.upstash.io/pipeline");
+    expect(calls[0]?.auth).toBe("Bearer tok");
+    expect(JSON.parse(calls[0]?.body ?? "[]")).toEqual([
+      ["SET", "order:dev1", 0, "PX", 10_000, "NX"],
+      ["INCR", "order:dev1"],
+      ["PTTL", "order:dev1"],
+    ]);
+  });
+
+  it("Upstash fora do ar não bloqueia clientes (fail-open)", async () => {
+    const rl = createUpstashRateLimiter({
+      max: 1,
+      windowMs: 1000,
+      url: "https://x",
+      token: "t",
+      fetch: async () => ({ ok: false, status: 500, json: async () => ({}) }),
+    });
+    const spy = console.error;
+    console.error = () => {};
+    try {
+      expect((await rl.hit("a")).ok).toBe(true);
+    } finally {
+      console.error = spy;
+    }
   });
 });

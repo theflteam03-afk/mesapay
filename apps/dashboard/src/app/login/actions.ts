@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  createMemoryRateLimiter,
+  createRateLimiter,
   SESSION_COOKIES,
   SESSION_TTL_SECONDS,
   sessionCookieOptions,
@@ -20,7 +20,7 @@ export interface LoginState {
 }
 
 // 10 tentativas por IP+e-mail a cada 15 minutos.
-const limiter = createMemoryRateLimiter({ max: 10, windowMs: 15 * 60_000 });
+const limiter = createRateLimiter({ max: 10, windowMs: 15 * 60_000, prefix: "owner-login" });
 
 export async function loginOwner(_prev: LoginState, form: FormData): Promise<LoginState> {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
@@ -30,7 +30,7 @@ export async function loginOwner(_prev: LoginState, form: FormData): Promise<Log
   if (!email || !password) return { error: t("auth.invalidCredentials"), email };
 
   const ip = await clientIp();
-  const rl = limiter.hit(`${ip}:${email}`);
+  const rl = await limiter.hit(`${ip}:${email}`);
   if (!rl.ok) return { error: t("auth.tooManyAttempts", { seconds: Math.ceil(rl.retryAfterMs / 1000) }), email };
 
   const owner = await prisma.ownerUser.findUnique({
@@ -48,7 +48,7 @@ export async function loginOwner(_prev: LoginState, form: FormData): Promise<Log
     return { error: t("auth.restaurantSuspended"), email };
   }
 
-  limiter.reset(`${ip}:${email}`);
+  await limiter.reset(`${ip}:${email}`);
   const ttl = trusted ? SESSION_TTL_SECONDS.ownerTrusted : SESSION_TTL_SECONDS.ownerDefault;
   const token = await signSession({ sub: owner.id, kind: "owner", rid: owner.restaurantId }, ttl);
   // "Dispositivo confiável": cookie persistente de 30 dias. Senão, cookie de sessão do navegador.

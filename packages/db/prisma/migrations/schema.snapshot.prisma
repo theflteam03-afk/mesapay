@@ -318,11 +318,13 @@ model Order {
   channel      Channel
   status       OrderStatus  @default(SENT)
   note         String?
+  clientRef    String?      // id gerado no celular: reenviar o mesmo pedido não o duplica
   createdAt    DateTime     @default(now())
   items        OrderItem[]
   printJobs    PrintJob[]
 
   @@unique([restaurantId, number])
+  @@unique([restaurantId, clientRef])
   @@index([restaurantId, createdAt])
   @@index([sessionId])
 }

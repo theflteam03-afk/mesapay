@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { tableUrl, WEB } from "./helpers";
+import { enterTable, tableUrl, WEB } from "./helpers";
 
 test.describe("Site e app da mesa", () => {
   test("landing mostra os 3 planos com preços", async ({ page }) => {
@@ -31,7 +31,10 @@ test.describe("Site e app da mesa", () => {
     const ctx = await browser.newContext({ locale: "en-US", extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" } });
     const page = await ctx.newPage();
     await page.goto(await tableUrl("demo", 3));
+    await expect(page.getByText("What's your name?")).toBeVisible();
+    await enterTable(page, await tableUrl("demo", 3), "Ann");
     await expect(page.getByTestId("table-number")).toContainText("Table 3");
+    await expect(page.getByTestId("tab-bill")).toHaveText(/Table bill/);
     await expect(page.getByRole("heading", { name: "Starters" })).toBeVisible();
     await ctx.close();
   });

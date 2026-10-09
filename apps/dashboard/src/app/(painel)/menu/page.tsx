@@ -4,6 +4,7 @@ import { withTenant } from "@mesapay/db";
 import { Badge, Card, PageHeader } from "@mesapay/ui";
 import { t } from "@/lib/i18n";
 import { requireOwnerSession } from "@/lib/session";
+import { SoldOutSwitch } from "./sold-out-switch";
 
 export const metadata: Metadata = { title: "Menu" };
 
@@ -48,11 +49,14 @@ export default async function MenuPage() {
                     {item.optionGroups.map((g) => (
                       <p key={g.id} className="mt-1 text-xs text-muted">
                         <span className="font-medium text-fg">{g.name}:</span>{" "}
-                        {g.options.map((o) => (o.priceCents ? `${o.name} (+${formatBRL(o.priceCents)})` : o.name)).join(" · ")}
+                        {g.options.map((o) => (o.priceCents ? `${o.name} (+${formatBRL(o.priceCents)})` : o.name)).join(", ")}
                       </p>
                     ))}
                   </div>
-                  <p className="shrink-0 font-medium tabular-nums">{formatBRL(item.priceCents)}</p>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <p className="font-medium tabular-nums">{formatBRL(item.priceCents)}</p>
+                    <SoldOutSwitch itemId={item.id} itemName={item.name} soldOut={item.soldOut} label={t("common.soldOut")} />
+                  </div>
                 </div>
               ))}
             </Card>

@@ -13,7 +13,7 @@ const nextConfig = {
   // O lint corre uma vez na raiz (pnpm lint), não em cada build.
   eslint: { ignoreDuringBuilds: true },
   outputFileTracingRoot: path.resolve(here, "../.."),
-  transpilePackages: ["@mesapay/ui", "@mesapay/core", "@mesapay/i18n", "@mesapay/config", "@mesapay/auth", "@mesapay/db"],
+  transpilePackages: ["@mesapay/ui", "@mesapay/core", "@mesapay/i18n", "@mesapay/config", "@mesapay/auth", "@mesapay/db", "@mesapay/realtime"],
   serverExternalPackages: ["pg", "@prisma/adapter-pg"],
   async headers() {
     return [

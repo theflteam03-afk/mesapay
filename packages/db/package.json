@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./tenant": "./src/tenant.ts",
-    "./demo": "./src/demo.ts"
+    "./demo": "./src/demo.ts",
+    "./services": "./src/services/table.ts",
+    "./types": "./src/services/types.ts"
   },
   "scripts": {
     "generate": "node scripts/generate.mjs",
@@ -24,7 +26,8 @@
     "@mesapay/core": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "@mesapay/realtime": "workspace:*"
   },
   "devDependencies": {
     "@prisma/driver-adapter-utils": "7.10.0",

@@ -7,11 +7,11 @@ Passo a passo para pôr o MesaPay no ar com Supabase (banco) e Vercel (apps). Os
 | Serviço | Para quê | Quando |
 | --- | --- | --- |
 | [GitHub](https://github.com) | código (já tem: `theflteam03-afk/mesapay`) | já |
-| [Supabase](https://supabase.com) | PostgreSQL, Realtime, Storage | agora |
+| [Supabase](https://supabase.com) | PostgreSQL (e Storage para fotos, Fase 4) | agora |
 | [Vercel](https://vercel.com) | hospedar os 3 apps Next | agora |
 | [Registro.br](https://registro.br) | domínio `.com.br` | agora |
 | [Mercado Pago Developers](https://www.mercadopago.com.br/developers) | Pix, cartão, wallets, OAuth dos restaurantes | Fase 5 |
-| [Upstash](https://upstash.com) | rate limiting (Redis) | Fase 2 |
+| [Upstash](https://upstash.com) | anti-spam / limite de tentativas (Redis) | agora (Fase 2) |
 | [Resend](https://resend.com) | e-mails (convites, senha) | Fase 7 |
 | [Google Cloud](https://console.cloud.google.com) | Places API (morada e link de avaliação) | Fase 5/7 |
 | [Sentry](https://sentry.io) | erros | opcional |
@@ -21,7 +21,7 @@ Passo a passo para pôr o MesaPay no ar com Supabase (banco) e Vercel (apps). Os
 1. Crie um projeto (região **South America (São Paulo)**). Guarde a senha do banco.
 2. Em **Project Settings → Database → Connection string**:
    - `DATABASE_URL` = **Transaction pooler** (porta 6543), usada pelos apps.
-   - `DIRECT_URL` = **Direct connection** (porta 5432). É usada nas migrações.
+   - `DIRECT_URL` = **Session pooler** (porta 5432 no host `pooler.supabase.com`). É usada nas migrações e no **tempo real**: o app da mesa faz `LISTEN` no Postgres, o que não funciona no Transaction pooler. Prefira o Session pooler à "Direct connection" porque esta só tem IPv6 nos planos sem o add-on de IPv4, e a Vercel liga por IPv4 (confirme no painel do Supabase, que mostra o aviso de IPv4 em cada opção).
 3. No seu computador, com essas duas variáveis no `.env`:
    ```bash
    pnpm db:migrate
@@ -55,7 +55,12 @@ PIN_PEPPER           # openssl rand -base64 32  — NUNCA mudar depois de criar 
 NEXT_PUBLIC_WEB_URL=https://mesapay.com.br
 NEXT_PUBLIC_DASHBOARD_URL=https://app.mesapay.com.br
 NEXT_PUBLIC_ADMIN_URL=https://admin.mesapay.com.br
+UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN   # Upstash → Redis → REST API
 ```
+
+`UPSTASH_*` liga o anti-spam partilhado entre as instâncias da Vercel (1 pedido a cada 10 s por celular, tentativas de login). Sem estas variáveis o limite fica na memória de cada instância, o que só serve em desenvolvimento.
+
+**Tempo real (app da mesa):** a rota `/api/t/{qrToken}/events` mantém uma ligação aberta (SSE) até 5 min (`maxDuration = 300`) e o celular religa sozinho. Nos planos em que a Vercel corta antes, o celular religa mais vezes; nada se perde, porque a cada religação ele volta a pedir a conta completa. Cada instância do app web abre 1 ligação extra ao Postgres (`LISTEN`).
 
 `AUTH_SECRET` e `PIN_PEPPER` são obrigatórios em produção (sem eles o login falha com um erro explícito; não há valor padrão). Trocar `AUTH_SECRET` desliga todas as sessões; trocar `PIN_PEPPER` invalida todos os PINs.
 

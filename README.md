@@ -9,7 +9,7 @@ SaaS multi-restaurante de pedidos e pagamentos por QR Code: o cliente escaneia a
 | Fase | Conteúdo | Estado |
 | --- | --- | --- |
 | 1. Fundação | Monorepo, schema, migrações, RLS, seed, login do dono e do admin (2FA), temas | ✅ concluída |
-| 2. App da mesa + pedidos | Nome no navegador, carrinho, envio, conta da mesa ao vivo | ⏳ |
+| 2. App da mesa + pedidos | Nome no navegador, menu com opções e esgotados, carrinho, envio, conta da mesa ao vivo | ✅ concluída |
 | 3. Impressão | PrintJob, navegador, agente ESC/POS, CloudPRNT, KDS | ⏳ |
 | 4. Painel do restaurante | Mesas, PIN, lançar pedido, Menu, Funcionários, Configurações | ⏳ |
 | 5. Pagamentos | Mercado Pago (Pix, cartão, wallets), divisão de conta, Google | ⏳ |
@@ -25,8 +25,9 @@ apps/
   admin/        painel SaaS da empresa (e-mail + senha + 2FA)                    :3002
   print-agent/  agente de impressão local (Fase 3; hoje só /health)            :3010
 packages/
-  db/           schema Prisma, migrações, RLS, seed, cliente + withTenant()
-  core/         regras de negócio puras (dinheiro em centavos, tokens, permissões)
+  db/           schema Prisma, migrações, RLS, seed, cliente + withTenant(), serviços da mesa
+  realtime/     eventos em tempo real: pg NOTIFY → SSE (servidor) e useLiveEvents (navegador)
+  core/         regras de negócio puras (dinheiro em centavos, preço do pedido, conta, tokens, permissões)
   auth/         senhas, PINs, TOTP (2FA), sessões em cookie, rate limit
   i18n/         pt-BR, en, es
   ui/           componentes e tokens de tema (claro/escuro + cor do restaurante)
@@ -80,6 +81,16 @@ pnpm test:e2e      # Playwright: sobe os apps sozinho (ou reutiliza o `pnpm dev`
 ```
 
 Na primeira vez, instale o navegador do Playwright: `pnpm --filter @mesapay/e2e exec playwright install chromium`.
+
+### Experimentar a Fase 2 (app da mesa)
+
+1. No painel (http://localhost:3001 → **Mesas**) clique em **Abrir app da mesa** numa mesa.
+2. Digite um nome. Abra o mesmo link numa janela anónima (ou no celular, trocando `localhost` pelo IP do computador) com outro nome.
+3. Peça de um lado; o pedido aparece na **Conta da mesa** do outro em menos de 2 s.
+4. No painel → **Menu**, ligue **Esgotado** num prato: o celular atualiza na hora.
+5. Recarregue o celular: não pede o nome de novo.
+
+**Critério de aceite da Fase 2** (testes E2E em `e2e/tests/table.mobile.spec.ts`): 3 navegadores na mesma mesa veem os pedidos uns dos outros em menos de 2 s; reabrir não pede o nome.
 
 **Critério de aceite da Fase 1** (coberto pelos testes E2E): `pnpm dev` sobe os 4 apps; o login do dono e do admin (com 2FA) funcionam; o seed aparece no painel (10 mesas, 30 pratos, 3 funcionários), no admin e no app da mesa.
 

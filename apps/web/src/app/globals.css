@@ -1,3 +1,45 @@
 @import "tailwindcss";
 @import "@mesapay/ui/styles.css";
 @source "../../../../packages/ui/src";
+
+/* App da mesa: folha que sobe de baixo (só anima quando o cliente abre; respeita "reduzir movimento"). */
+dialog.sheet[open] > div {
+  animation: sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog.sheet::backdrop {
+  animation: fade-in 200ms ease-out;
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24%);
+    opacity: 0.4;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.sheet[open] > div,
+  dialog.sheet::backdrop {
+    animation: none;
+  }
+}
+
+/* Conta da mesa como recibo térmico: borda inferior serrilhada. */
+.receipt {
+  --tooth: 10px;
+  mask:
+    conic-gradient(from 135deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% 100% / var(--tooth) calc(var(--tooth) / 2) repeat-x,
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth) / 2 + 0.5px) no-repeat;
+}
+.receipt-rule {
+  border-top: 1.5px dashed var(--border);
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

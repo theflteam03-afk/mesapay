@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  createMemoryRateLimiter,
+  createRateLimiter,
   generateTotpSecret,
   SESSION_COOKIES,
   SESSION_TTL_SECONDS,
@@ -22,8 +22,8 @@ export interface FormState {
   email?: string;
 }
 
-const passwordLimiter = createMemoryRateLimiter({ max: 8, windowMs: 15 * 60_000 });
-const codeLimiter = createMemoryRateLimiter({ max: 6, windowMs: 10 * 60_000 });
+const passwordLimiter = createRateLimiter({ max: 8, windowMs: 15 * 60_000, prefix: "admin-login" });
+const codeLimiter = createRateLimiter({ max: 6, windowMs: 10 * 60_000, prefix: "admin-2fa" });
 
 /** Passo 1: e-mail + senha → cookie temporário "falta o 2FA" (10 min). */
 export async function loginAdmin(_prev: FormState, form: FormData): Promise<FormState> {
@@ -32,7 +32,7 @@ export async function loginAdmin(_prev: FormState, form: FormData): Promise<Form
   if (!email || !password) return { error: t("auth.invalidCredentials"), email };
 
   const ip = await clientIp();
-  const rl = passwordLimiter.hit(`${ip}:${email}`);
+  const rl = await passwordLimiter.hit(`${ip}:${email}`);
   if (!rl.ok) return { error: t("auth.tooManyAttempts", { seconds: Math.ceil(rl.retryAfterMs / 1000) }), email };
 
   const user = await prisma.saasUser.findUnique({ where: { email } });
@@ -42,7 +42,7 @@ export async function loginAdmin(_prev: FormState, form: FormData): Promise<Form
     return { error: t("auth.invalidCredentials"), email };
   }
 
-  passwordLimiter.reset(`${ip}:${email}`);
+  await passwordLimiter.reset(`${ip}:${email}`);
   // Sem 2FA configurado: gera um segredo novo, que só fica gravado depois de confirmado.
   const setup = user.totpSecret ? undefined : generateTotpSecret();
   const token = await signSession({ sub: user.id, kind: "admin-mfa", ...(setup ? { setup } : {}) }, SESSION_TTL_SECONDS.adminMfa);
@@ -57,7 +57,7 @@ export async function verifyAdminCode(_prev: FormState, form: FormData): Promise
   if (!pending) redirect("/login");
 
   const ip = await clientIp();
-  const rl = codeLimiter.hit(pending.sub);
+  const rl = await codeLimiter.hit(pending.sub);
   if (!rl.ok) return { error: t("auth.tooManyAttempts", { seconds: Math.ceil(rl.retryAfterMs / 1000) }) };
 
   const user = await prisma.saasUser.findUnique({ where: { id: pending.sub } });
@@ -70,7 +70,7 @@ export async function verifyAdminCode(_prev: FormState, form: FormData): Promise
     return { error: t("auth.mfaInvalid") };
   }
 
-  codeLimiter.reset(pending.sub);
+  await codeLimiter.reset(pending.sub);
   const activated = !user.totpSecret;
   await prisma.$transaction([
     prisma.saasUser.update({
