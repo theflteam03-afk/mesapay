@@ -10,7 +10,7 @@ SaaS multi-restaurante de pedidos e pagamentos por QR Code: o cliente escaneia a
 | --- | --- | --- |
 | 1. Fundação | Monorepo, schema, migrações, RLS, seed, login do dono e do admin (2FA), temas | ✅ concluída |
 | 2. App da mesa + pedidos | Nome no navegador, menu com opções e esgotados, carrinho, envio, conta da mesa ao vivo | ✅ concluída |
-| 3. Impressão | PrintJob, navegador, agente ESC/POS, CloudPRNT, KDS | ⏳ |
+| 3. Impressão | Tickets por estação, impressão pelo navegador, agente ESC/POS, Star CloudPRNT, Epson, tela Cozinha (KDS), alerta offline | ✅ concluída |
 | 4. Painel do restaurante | Mesas, PIN, lançar pedido, Menu, Funcionários, Configurações | ⏳ |
 | 5. Pagamentos | Mercado Pago (Pix, cartão, wallets), divisão de conta, Google | ⏳ |
 | 6. Dashboard e relatórios | Gráficos, mapa de mesas, ranking, Excel/PDF | ⏳ |
@@ -23,10 +23,11 @@ apps/
   web/          site institucional (/) + app da mesa (/r/{slug}/m/{qrToken})   :3000
   dashboard/    painel do restaurante                                           :3001
   admin/        painel SaaS da empresa (e-mail + senha + 2FA)                    :3002
-  print-agent/  agente de impressão local (Fase 3; hoje só /health)            :3010
+  print-agent/  agente de impressão local: térmica ESC/POS em rede (9100) ou USB  :3010
 packages/
   db/           schema Prisma, migrações, RLS, seed, cliente + withTenant(), serviços da mesa
   realtime/     eventos em tempo real: pg NOTIFY → SSE (servidor) e useLiveEvents (navegador)
+  print/        ticket de cozinha (80/58 mm), ESC/POS em PC860, Star CloudPRNT, Epson ePOS
   core/         regras de negócio puras (dinheiro em centavos, preço do pedido, conta, tokens, permissões)
   auth/         senhas, PINs, TOTP (2FA), sessões em cookie, rate limit
   i18n/         pt-BR, en, es
@@ -91,6 +92,18 @@ Na primeira vez, instale o navegador do Playwright: `pnpm --filter @mesapay/e2e 
 5. Recarregue o celular: não pede o nome de novo.
 
 **Critério de aceite da Fase 2** (testes E2E em `e2e/tests/table.mobile.spec.ts`): 3 navegadores na mesma mesa veem os pedidos uns dos outros em menos de 2 s; reabrir não pede o nome.
+
+### Experimentar a Fase 3 (impressão e tela da cozinha)
+
+1. No painel, abra **Cozinha**. O seed criou duas impressoras do tipo navegador, "Cozinha" e "Bar".
+2. Em **Imprimir neste computador**, escolha "Cozinha". A partir daí, este computador imprime os tickets da cozinha (abre a janela de impressão; com o Chrome em `--kiosk-printing` imprime direto).
+3. Faça um pedido no app da mesa: o ticket sai em segundos e o pedido aparece na coluna **Novos**.
+4. Avance o pedido (**Começar preparo** → **Marcar pronto** → **Entregue**): o cliente vê o estado na conta da mesa.
+5. Feche a tela Cozinha da outra impressora: em 30 s aparece o alerta vermelho de impressora offline.
+
+Térmica de verdade (ESC/POS em rede ou USB): em **Configurações → Impressoras**, adicione uma impressora do tipo **Agente local** com o IP da térmica e rode o agente com o comando mostrado no cartão. Star (CloudPRNT) e Epson (Server Direct Print): cole na impressora o URL mostrado no cartão. Detalhes em [`docs/DEPLOY.md`](docs/DEPLOY.md#6-impressoras).
+
+**Critério de aceite da Fase 3** (testes E2E em `e2e/tests/print.spec.ts`, com uma térmica simulada na porta TCP e o agente real): pedido pelo QR imprime o ticket com nome, mesa e itens em menos de 3 s; impressora offline gera alerta.
 
 **Critério de aceite da Fase 1** (coberto pelos testes E2E): `pnpm dev` sobe os 4 apps; o login do dono e do admin (com 2FA) funcionam; o seed aparece no painel (10 mesas, 30 pratos, 3 funcionários), no admin e no app da mesa.
 

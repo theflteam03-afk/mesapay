@@ -17,7 +17,12 @@ export type RealtimeEvent =
   | { type: "session.updated"; restaurantId: string; sessionId: string }
   | { type: "session.closed"; restaurantId: string; sessionId: string; tableId: string }
   | { type: "menu.updated"; restaurantId: string; menuItemId?: string; soldOut?: boolean }
-  | { type: "table.updated"; restaurantId: string; tableId: string };
+  | { type: "table.updated"; restaurantId: string; tableId: string }
+  /** Fila de impressão mudou (novo ticket, impresso, falhou, impressora ligou/desligou). */
+  | { type: "print.updated"; restaurantId: string; printerId?: string };
+
+/** Eventos do restaurante que não pertencem a uma comanda. */
+const RESTAURANT_EVENTS = new Set(["menu.updated", "table.updated", "print.updated"]);
 
 /** Enviado só do servidor SSE para o navegador quando a ligação foi refeita: "volte a sincronizar". */
 export type ClientEvent = RealtimeEvent | { type: "resync" };
@@ -35,7 +40,7 @@ export function parseEvent(raw: string): RealtimeEvent | null {
     if (!v || typeof v !== "object") return null;
     const o = v as Record<string, unknown>;
     if (typeof o.type !== "string" || typeof o.restaurantId !== "string") return null;
-    if (o.type.startsWith("menu.") || o.type === "table.updated") return o as RealtimeEvent;
+    if (RESTAURANT_EVENTS.has(o.type)) return o as RealtimeEvent;
     if (typeof o.sessionId !== "string") return null;
     return o as RealtimeEvent;
   } catch {

@@ -1,31 +1,26 @@
 import { createServer, type Server } from "node:http";
+import type { AgentPrinterStatus } from "./agent";
 
 export interface AgentStatus {
   ok: true;
   service: "mesapay-print-agent";
   version: string;
   startedAt: string;
-  /** Impressoras locais configuradas (preenchido na Fase 3). */
-  printers: { name: string; station: "KITCHEN" | "BAR"; online: boolean }[];
+  apiUrl: string | null;
+  printers: AgentPrinterStatus[];
 }
 
 /**
- * Agente de impressão local (opção B do plano): na Fase 3 liga-se por WebSocket à API,
- * recebe os PrintJobs e envia ESC/POS para térmicas em rede/USB.
- * Na Fase 1 expõe apenas /health para o restaurante confirmar que o agente está a correr.
+ * Página local de estado: http://127.0.0.1:3010/health — o restaurante (ou o suporte)
+ * confirma que o agente está a correr, ligado à API e quantos tickets já imprimiu.
  */
-export function createAgentServer(version = "0.1.0"): Server {
-  const status: AgentStatus = {
-    ok: true,
-    service: "mesapay-print-agent",
-    version,
-    startedAt: new Date().toISOString(),
-    printers: [],
-  };
+export function createAgentServer(version = "0.3.0", getPrinters: () => AgentPrinterStatus[] = () => [], apiUrl: string | null = null): Server {
+  const startedAt = new Date().toISOString();
   return createServer((req, res) => {
     if (req.method === "GET" && (req.url === "/health" || req.url === "/")) {
+      const status: AgentStatus = { ok: true, service: "mesapay-print-agent", version, startedAt, apiUrl, printers: getPrinters() };
       res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify(status));
+      res.end(JSON.stringify(status, null, 2));
       return;
     }
     res.writeHead(404, { "content-type": "application/json; charset=utf-8" });

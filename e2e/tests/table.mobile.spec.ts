@@ -113,8 +113,9 @@ test.describe("App da mesa no celular", () => {
     expect(Date.now() - sentAt2).toBeLessThan(2000);
 
     // Os três veem o mesmo total; o servidor gravou o mesmo valor na comanda.
-    const totals = await Promise.all([ana, bia, caio].map((p) => p.getByTestId("bill-total").textContent()));
-    expect(new Set(totals).size).toBe(1);
+    const readTotals = () => Promise.all([ana, bia, caio].map((p) => p.getByTestId("bill-total").textContent()));
+    await expect.poll(async () => new Set(await readTotals()).size, { timeout: 2000 }).toBe(1);
+    const totals = await readTotals();
     const table = await prisma.table.findFirstOrThrow({ where: { restaurant: { slug: "demo" }, number: 5 } });
     const session = await prisma.tableSession.findFirstOrThrow({ where: { tableId: table.id, status: "OPEN" } });
     expect(totals[0]?.replace(/\s/g, " ")).toBe(`R$ ${(session.total / 100).toFixed(2).replace(".", ",")}`);

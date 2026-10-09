@@ -10,7 +10,7 @@ import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: path.resolve(import.meta.dirname, "../../../.env"), quiet: true });
 
-const { DEFAULT_PERMISSIONS, generateQrToken, toCents } = await import("@mesapay/core");
+const { DEFAULT_PERMISSIONS, generateQrToken, randomToken, toCents } = await import("@mesapay/core");
 const { hashPassword, hashPin, pinLookup } = await import("@mesapay/auth");
 const { prisma } = await import("./index");
 const { DEMO } = await import("./demo");
@@ -298,6 +298,21 @@ async function seedRestaurant(input: {
   console.log(`✓ restaurante "${input.name}" (${input.slug}): ${input.tables} mesas, ${itemCount} pratos, ${input.staff.length} funcionários`);
 }
 
+/**
+ * Impressoras de demonstração (idempotente: também corre em bancos já semeados).
+ * Tipo "navegador": a tela Cozinha do painel imprime nelas sem instalar nada.
+ */
+async function ensurePrinters(slug: string, printers: { name: string; station: "KITCHEN" | "BAR" }[]) {
+  const r = await prisma.restaurant.findUnique({ where: { slug }, select: { id: true, _count: { select: { printers: true } } } });
+  if (!r || r._count.printers > 0) return;
+  for (const p of printers) {
+    await prisma.printer.create({
+      data: { restaurantId: r.id, name: p.name, station: p.station, type: "BROWSER", width: 48, printerKey: randomToken(32) },
+    });
+  }
+  console.log(`✓ impressoras de "${slug}": ${printers.map((p) => p.name).join(", ")}`);
+}
+
 async function main() {
   await seedSaasAdmin();
 
@@ -348,6 +363,12 @@ async function main() {
     staff: [{ name: "Pedro Alves", role: "WAITER", pin: "1111" }],
     owner: { email: "dono@aurora.mesapay.com.br", password: "mesapay123", name: "Lúcia Ramos" },
   });
+
+  await ensurePrinters(DEMO.slug, [
+    { name: "Cozinha", station: "KITCHEN" },
+    { name: "Bar", station: "BAR" },
+  ]);
+  await ensurePrinters("aurora", [{ name: "Balcão", station: "BAR" }]);
 
   const table1 = await prisma.table.findFirst({ where: { restaurant: { slug: DEMO.slug }, number: 1 } });
   const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3000";

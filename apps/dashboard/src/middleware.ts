@@ -17,5 +17,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|icon.svg|api/health).*)"],
+  // As impressoras (agente local, Star CloudPRNT, Epson) autenticam-se com o printerKey, não com cookie.
+  matcher: ["/((?!_next/|favicon.ico|icon.svg|api/health|api/print/agent/|api/print/cloudprnt/|api/print/epson/).*)"],
 };

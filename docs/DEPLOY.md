@@ -75,10 +75,25 @@ Repita os passos 2 e 3 com outro projeto Supabase e domínios `staging.mesapay.c
 3. Configure o webhook para `https://mesapay.com.br/api/webhooks/mercadopago` e guarde a assinatura em `MP_WEBHOOK_SECRET`.
 4. `PAYMENT_PROVIDER=mercadopago`.
 
-## 6. Checklist antes de abrir para clientes
+## 6. Impressoras
+
+Cada impressora é cadastrada em **Painel → Configurações → Impressoras**. O cartão de cada uma mostra o que configurar (a chave secreta fica escondida até clicar em "Mostrar").
+
+| Tipo | Hardware | O que fazer |
+| --- | --- | --- |
+| Navegador | qualquer impressora instalada no PC do painel | Abrir **Cozinha** nesse PC e escolher a impressora em "Imprimir neste computador". Para não abrir a janela de impressão: atalho do Chrome com `--kiosk-printing` e a térmica como impressora padrão. |
+| Agente local | térmica ESC/POS em rede (porta 9100) ou USB | Num PC ou Raspberry Pi sempre ligado na rede do restaurante, com Node 20+: clonar o repositório, `pnpm install`, e rodar `MESAPAY_API_URL=https://app.mesapay.com.br MESAPAY_PRINTERS=<chave> pnpm --filter @mesapay/print-agent start`. Várias térmicas: chaves separadas por vírgula. Estado em `http://127.0.0.1:3010/health`. Para arrancar com o PC, use o Agendador de Tarefas (Windows) ou um serviço systemd (Linux). |
+| Star CloudPRNT | Star mC-Print3, TSP100IV | Na página web da impressora: CloudPRNT → ativar, Server URL = URL do cartão, intervalo 3 s. |
+| Epson SDP | Epson TM-m30III / TM-m30II | Na configuração web (EpsonNet Config): Server Direct Print → ativar, URL do cartão, intervalo 3 s. |
+
+USB no Linux: o utilizador que corre o agente precisa de acesso a `/dev/usb/lp0` (grupo `lp`). Windows: partilhe a térmica com o driver "Genérico / Somente texto" e use `\\localhost\NomeDaPartilha` como endereço.
+
+## 7. Checklist antes de abrir para clientes
 
 - [ ] `pnpm test` e `pnpm test:e2e` passam contra staging
 - [ ] Super admin real criado e contas de demonstração ausentes
 - [ ] 2FA ativo em todas as contas admin
 - [ ] Backups/PITR ligados
 - [ ] Políticas de privacidade e termos publicados (LGPD)
+- [ ] Impressoras de cada restaurante testadas (pedido de teste sai em < 3 s; desligar a impressora faz aparecer o alerta)
+- [ ] Star/Epson validadas com hardware real (ver DECISIONS D24)

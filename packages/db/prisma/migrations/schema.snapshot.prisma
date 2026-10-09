@@ -141,6 +141,7 @@ model Restaurant {
   requireQrApproval Boolean         @default(false)
   locales          String[]         @default(["pt-BR"])
   currency         String           @default("BRL")
+  timezone         String           @default("America/Sao_Paulo")
   plan             Plan             @default(START)
   status           RestaurantStatus @default(ONBOARDING)
   paymentAccountId String?
@@ -415,11 +416,17 @@ model Printer {
   name         String
   station      Station
   type         PrinterType
-  address      String?     // IP/USB para agente local
-  printerKey   String      @unique // segredo usado no polling CloudPRNT
-  lastSeenAt   DateTime?
+  address      String?     // agente local: "192.168.0.50:9100" ou "/dev/usb/lp0"
+  printerKey   String      @unique // segredo que a impressora/agente usa para buscar os tickets
+  /** Colunas de texto: 48 = papel de 80 mm, 32 = papel de 58 mm. */
+  width        Int         @default(48)
+  lastSeenAt   DateTime?   // última vez que a impressora/agente/navegador consultou a fila
+  lastError    String?
   active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
   jobs         PrintJob[]
+
+  @@index([restaurantId])
 }
 
 model PrintJob {
@@ -432,11 +439,16 @@ model PrintJob {
   printer      Printer        @relation(fields: [printerId], references: [id])
   status       PrintJobStatus @default(PENDING)
   attempts     Int            @default(0)
-  payload      String         // texto do ticket já formatado
+  payload      String         // texto do ticket já formatado na largura da impressora
+  reprint      Boolean        @default(false)
+  lastError    String?
   createdAt    DateTime       @default(now())
+  sentAt       DateTime?      // entregue à impressora; sem confirmação em 30 s volta para a fila
   printedAt    DateTime?
 
   @@index([printerId, status])
+  @@index([restaurantId, status])
+  @@index([orderId])
 }
 
 // ───────────── Relatórios ─────────────

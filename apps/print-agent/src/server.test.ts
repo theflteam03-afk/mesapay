@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAgentServer } from "./server";
 
-const server = createAgentServer("test");
+const server = createAgentServer("test", () => []);
 let base = "";
 
 beforeAll(async () => {

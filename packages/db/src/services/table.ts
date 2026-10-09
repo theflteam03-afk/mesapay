@@ -12,6 +12,8 @@ import { publish } from "@mesapay/realtime/events";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../index";
 import { withTenant, type TenantTx } from "../tenant";
+import { ServiceError } from "./errors";
+import { createPrintJobs } from "./print";
 import type {
   BillDTO,
   BillGroupDTO,
@@ -20,7 +22,6 @@ import type {
   JoinResultDTO,
   MenuCategoryDTO,
   OrderStatusDTO,
-  ServiceErrorCode,
 } from "./types";
 
 /**
@@ -29,16 +30,7 @@ import type {
  * Tudo o que toca dados do restaurante corre dentro de `withTenant` (RLS).
  */
 
-export class ServiceError extends Error {
-  constructor(
-    readonly code: ServiceErrorCode,
-    readonly status: number,
-    readonly extra: { itemName?: string; group?: string; retryAfterMs?: number } = {},
-  ) {
-    super(code);
-    this.name = "ServiceError";
-  }
-}
+export { ServiceError } from "./errors";
 
 export const DEVICE_ID_RE = /^[A-Za-z0-9-]{16,64}$/;
 export const QR_TOKEN_RE = /^[A-Za-z0-9]{16,64}$/;
@@ -480,6 +472,8 @@ export async function createGuestOrder(restaurantId: string, sessionId: string, 
       });
 
       await recomputeSessionTotals(tx, sessionId);
+      // Imprime já na cozinha/bar (se o restaurante exige aprovação, só depois de aceite no painel).
+      if (order.status === "SENT") await createPrintJobs(tx, order.id);
       await publish(tx, {
         type: "order.created",
         restaurantId,

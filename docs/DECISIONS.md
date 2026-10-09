@@ -72,3 +72,26 @@ O plano põe o Menu completo na Fase 4, mas a Fase 2 exige esgotados ao vivo no 
 
 ### D18. Interface do app da mesa
 Sem bibliotecas de UI no navegador (ícones em SVG próprio, `<dialog>` nativo para as folhas): 119 kB de JS inicial (meta < 200 kB). A conta da mesa é desenhada como um recibo térmico; o resto usa a cor e o tema do restaurante. Pagar pelo celular chega na Fase 5; até lá a conta diz "Para pagar, chame um funcionário".
+
+## Fase 3
+
+### D19. Um ticket por impressora, separado por estação
+Ao criar o pedido (na mesma transação), os itens de cozinha vão para as impressoras KITCHEN e os de bar para as BAR. Sem impressora da estação, vão para as outras (cabeçalho "COZINHA E BAR"): no plano Start, com uma só impressora, nada se perde. O ticket é guardado já formatado em texto na largura da impressora (48 colunas = 80 mm, 32 = 58 mm); cada tipo de impressora só muda o "envelope" (ESC/POS, text/plain, XML ePOS). Pedidos à espera de aprovação só geram tickets quando aceites no KDS.
+
+### D20. Fila com entrega garantida
+`PENDING → SENT → PRINTED`. A entrega usa `SELECT … FOR UPDATE SKIP LOCKED` (dois pedidos da mesma impressora nunca recebem o mesmo ticket). Sem confirmação em 30 s, o ticket volta para a fila; à 5.ª tentativa falhada fica `FAILED`, com alerta no painel e botão "Tentar de novo". Quando todos os tickets de um pedido saem, o pedido passa a `PRINTED` (o cliente continua a ver "Enviado").
+
+### D21. Agente local por polling HTTP (não WebSocket)
+O plano sugeria WebSocket, mas as funções serverless da Vercel não mantêm WebSockets. O agente (`apps/print-agent`) pergunta à API a cada 1 s (`POST /api/print/agent/{printerKey}/next`), recebe os bytes ESC/POS e envia-os à térmica por TCP 9100 ou para um ficheiro de dispositivo (USB no Linux, impressora partilhada no Windows). O endereço da térmica fica no painel; o agente só precisa da URL e da chave. Cada pergunta é também o sinal de vida.
+
+### D22. Offline = 30 s sem consultar a fila
+Vale para os quatro tipos: o agente e as impressoras Star/Epson consultam a fila a cada 1–5 s; a tela Cozinha em modo navegador a cada 5 s. O alerta vermelho (com bip de 3 toques, repetido a cada 60 s) aparece quando uma impressora está offline e tem tickets à espera ou estava a funcionar e caiu. Impressoras nunca ligadas sem tickets ficam só como "Ainda não ligada", para o restaurante não viver com um alarme.
+
+### D23. Página de código PC860
+Os tickets ESC/POS usam PC860 (português, `ESC t 3`): á, ã, ç, ê, õ… saem certos nas térmicas Epson e compatíveis. Caracteres fora da PC860 perdem o acento. Star CloudPRNT recebe `text/plain` UTF-8 e Epson recebe XML ePOS (a impressora trata da codificação).
+
+### D24. Star e Epson implementados pelo protocolo, ainda sem hardware
+CloudPRNT (POST/GET/DELETE) e Server Direct Print (GetRequest/SetResponse) seguem a documentação dos fabricantes e têm testes automáticos que simulam a impressora. Antes de vender o plano Pro com impressora cloud, validar com uma mC-Print3 e uma TM-m30III reais (só a formatação pode precisar de ajuste).
+
+### D25. Ações da cozinha sem PIN (por enquanto)
+Aceitar, avançar estados, reimprimir e configurar impressoras usam a sessão do dispositivo do dono. Na Fase 4 passam a exigir PIN de funcionário com a permissão certa.

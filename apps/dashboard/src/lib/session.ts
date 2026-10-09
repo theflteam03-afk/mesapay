@@ -20,7 +20,7 @@ export const getOwnerSession = cache(async () => {
       name: true,
       email: true,
       restaurant: {
-        select: { id: true, name: true, slug: true, theme: true, primaryColor: true, status: true, plan: true, logoUrl: true },
+        select: { id: true, name: true, slug: true, theme: true, primaryColor: true, status: true, plan: true, logoUrl: true, timezone: true },
       },
     },
   });

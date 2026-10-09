@@ -15,6 +15,7 @@
     "@mesapay/core": "workspace:*",
     "@mesapay/db": "workspace:*",
     "@mesapay/i18n": "workspace:*",
+    "@mesapay/print": "workspace:*",
     "@mesapay/realtime": "workspace:*",
     "@mesapay/ui": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",

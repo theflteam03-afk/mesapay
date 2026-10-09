@@ -26,6 +26,7 @@ let pudimId = "";
 async function cleanTable(tableId: string) {
   const sessions = await prisma.tableSession.findMany({ where: { tableId }, select: { id: true } });
   const ids = sessions.map((s) => s.id);
+  await prisma.printJob.deleteMany({ where: { order: { sessionId: { in: ids } } } });
   await prisma.orderItem.deleteMany({ where: { order: { sessionId: { in: ids } } } });
   await prisma.order.deleteMany({ where: { sessionId: { in: ids } } });
   await prisma.guest.deleteMany({ where: { sessionId: { in: ids } } });

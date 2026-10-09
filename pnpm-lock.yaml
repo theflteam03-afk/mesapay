@@ -123,6 +123,9 @@ importers:
       '@mesapay/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@mesapay/print':
+        specifier: workspace:*
+        version: link:../../packages/print
       '@mesapay/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime
@@ -337,6 +340,9 @@ importers:
       '@mesapay/core':
         specifier: workspace:*
         version: link:../core
+      '@mesapay/print':
+        specifier: workspace:*
+        version: link:../print
       '@mesapay/realtime':
         specifier: workspace:*
         version: link:../realtime
@@ -382,6 +388,18 @@ importers:
         version: 3.2.4(@types/node@22.19.1)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.20.6)
 
   packages/i18n:
+    devDependencies:
+      '@mesapay/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/node@22.19.1)(jiti@2.7.0)(lightningcss@1.30.2)(tsx@4.20.6)
+
+  packages/print:
     devDependencies:
       '@mesapay/config':
         specifier: workspace:*

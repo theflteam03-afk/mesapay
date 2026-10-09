@@ -8,7 +8,8 @@
     "./tenant": "./src/tenant.ts",
     "./demo": "./src/demo.ts",
     "./services": "./src/services/table.ts",
-    "./types": "./src/services/types.ts"
+    "./types": "./src/services/types.ts",
+    "./print": "./src/services/print.ts"
   },
   "scripts": {
     "generate": "node scripts/generate.mjs",
@@ -27,7 +28,8 @@
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "pg": "8.23.1",
-    "@mesapay/realtime": "workspace:*"
+    "@mesapay/realtime": "workspace:*",
+    "@mesapay/print": "workspace:*"
   },
   "devDependencies": {
     "@prisma/driver-adapter-utils": "7.10.0",
