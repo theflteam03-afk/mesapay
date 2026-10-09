@@ -43,7 +43,7 @@ Pré-requisitos: **Node 20.11+**, **pnpm 10** (`corepack enable`) e **Docker** (
 cp .env.example .env          # nada precisa de conta externa para desenvolver
 docker compose up -d          # PostgreSQL em localhost:5432
 pnpm install
-pnpm setup                    # gera o cliente Prisma, aplica migrações e cria o seed
+pnpm run setup                # (com "run"! `pnpm setup` sozinho é outro comando do pnpm) gera o cliente Prisma, aplica migrações e cria o seed
 pnpm dev                      # sobe os 4 apps
 ```
 
